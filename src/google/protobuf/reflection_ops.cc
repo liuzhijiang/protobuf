@@ -46,6 +46,23 @@
 
 #include <google/protobuf/port_def.inc>
 
+namespace google{
+namespace protobuf{
+namespace internal{
+std::vector<std::string> name_list2;
+std::string get_name2(){
+  std::string ret; 
+  for (int i = 0; i < name_list2.size(); i++){
+    if (i > 0){
+      ret += ";"; 
+    }    
+    ret += name_list2[i];
+  }
+  return ret; 
+}
+}
+}
+}
 namespace google {
 namespace protobuf {
 namespace internal {

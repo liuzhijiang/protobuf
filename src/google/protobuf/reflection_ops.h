@@ -51,6 +51,8 @@ namespace google {
 namespace protobuf {
 namespace internal {
 
+extern std::vector<std::string> name_list2;
+extern std::string get_name2();
 // Basic operations that can be performed using reflection.
 // These can be used as a cheap way to implement the corresponding
 // methods of the Message interface, though they are likely to be

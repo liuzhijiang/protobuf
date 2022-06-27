@@ -499,7 +499,14 @@ void ParseFunctionGenerator::GenerateLoopingParseFunction(Formatter& format) {
       "::$proto_ns$::internal::ParseContext* ctx) {\n"
       "$annotate_deserialize$"
       "#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure\n");
+  
   format.Indent();
+  
+  char buffer[1024];
+  snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"[M]%s\"));\n", descriptor_->name().c_str());
+  format(buffer);
+  //format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
   format.Set("msg", "");
   format.Set("this", "this");
   int hasbits_size = 0;
@@ -528,6 +535,7 @@ void ParseFunctionGenerator::GenerateLoopingParseFunction(Formatter& format) {
   format("message_done:\n");
   if (hasbits_size) format("  _has_bits_.Or(has_bits);\n");
 
+  format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
   format(
       "  return ptr;\n"
       "failure:\n"
@@ -722,9 +730,24 @@ void ParseFunctionGenerator::GenerateStrings(Formatter& format,
   }
 }
 
+/*
+std::vector<std::string> name_list2;
+std::string get_name2(){
+  std::string ret; 
+  for (int i = 0; i < name_list2.size(); i++){
+    if (i > 0){
+      ret += ";"; 
+    }    
+    ret += name_list2[i];
+  }
+  return ret; 
+}
+*/
 void ParseFunctionGenerator::GenerateLengthDelim(Formatter& format,
                                                  const FieldDescriptor* field) {
+  char buffer[1024];
   if (field->is_packable()) {
+    format(" begin = const_cast<char*>(ptr);\n");
     if (field->type() == FieldDescriptor::TYPE_ENUM &&
         !HasPreservingUnknownEnumSemantics(field)) {
       std::string enum_type = QualifiedClassName(field->enum_type(), options_);
@@ -739,17 +762,67 @@ void ParseFunctionGenerator::GenerateLengthDelim(Formatter& format,
           "ptr = ::$proto_ns$::internal::Packed$1$Parser("
           "$msg$_internal_mutable_$name$(), ptr, ctx);\n",
           DeclaredTypeMethodName(field->type()));
+      /*
+      if (field->full_name() == "ks.reco.UserInfo.browsed_photo_ids"){
+        char buff[1024];
+        snprintf(buff, sizeof(buff), "browsed_photo_ids_values:");
+        format(buff);
+        snprintf(buff, sizeof(buff), "for (int i = 0; i < browsed_photo_ids().size(); i++){\n");
+        format(buff);
+        snprintf(buff, sizeof(buff), "    printf(\"%%ld,\", browsed_photo_ids(i));\n");
+        format(buff);
+        snprintf(buff, sizeof(buff), "}\n");
+        format(buff);
+        snprintf(buff, sizeof(buff), "printf(\"\\n\");\n");
+        format(buff);
+      }
+      */
     }
+
+    format(" end = const_cast<char*>(ptr);\n");
+
+    snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"[L]%s\"));\n", field->name().c_str());
+    format(buffer);
+    snprintf(buffer, sizeof(buffer), " printf(\"FLAMEGRAPH2:%%s %%ld\\n\", ::PROTOBUF_NAMESPACE_ID::internal::get_name2().c_str(), (end - begin));\n");
+    format(buffer);
+    format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
   } else {
     auto field_type = field->type();
     switch (field_type) {
       case FieldDescriptor::TYPE_STRING:
+  
+        format("  begin = const_cast<char*>(ptr);\n");
+        
         GenerateStrings(format, field, true /* utf8 */);
+
+        format(" end = const_cast<char*>(ptr);\n");
+
+        snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"[S]%s\"));\n", field->name().c_str());
+        format(buffer);
+        snprintf(buffer, sizeof(buffer), " printf(\"FLAMEGRAPH2:%%s %%ld\\n\", ::PROTOBUF_NAMESPACE_ID::internal::get_name2().c_str(), (end - begin));\n");
+        format(buffer);
+        format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
         break;
       case FieldDescriptor::TYPE_BYTES:
+
+        format("  begin = const_cast<char*>(ptr);\n");
+
         GenerateStrings(format, field, false /* utf8 */);
+  
+        format(" end = const_cast<char*>(ptr);\n");
+
+        snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"[S]%s\"));\n", field->name().c_str());
+        format(buffer);
+        snprintf(buffer, sizeof(buffer), " printf(\"FLAMEGRAPH2:%%s %%ld\\n\", ::PROTOBUF_NAMESPACE_ID::internal::get_name2().c_str(), (end - begin));\n");
+        format(buffer);
+        format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
         break;
       case FieldDescriptor::TYPE_MESSAGE: {
+        //snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"%s\"));\n", field->name().c_str());
+        //format(buffer);
         if (field->is_map()) {
           const FieldDescriptor* val =
               field->message_type()->FindFieldByName("value");
@@ -819,6 +892,9 @@ void ParseFunctionGenerator::GenerateLengthDelim(Formatter& format,
               "ptr = ctx->ParseMessage($msg$_internal_$mutable_field$(), "
               "ptr);\n");
         }
+
+        //format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
         break;
       }
       default:
@@ -840,6 +916,21 @@ static bool ShouldRepeat(const FieldDescriptor* descriptor,
 void ParseFunctionGenerator::GenerateFieldBody(
     Formatter& format, WireFormatLite::WireType wiretype,
     const FieldDescriptor* field) {
+  char buffer[1024];
+  bool is_length_delimited = wiretype == WireFormatLite::WIRETYPE_LENGTH_DELIMITED;
+  {
+    std::string full_name = field->full_name();
+    for (int i = 0; i < full_name.size(); i++){
+        if (full_name[i] != '.'){
+            continue;
+        }
+        full_name[i] = ';';
+    }
+    char buffer[1024];
+    snprintf(buffer, sizeof(buffer), "printf(\"field_name:%s, type:%s, is_repeated:%s, is_length_delimited:%s, is_packable:%d\\n\");\n", field->full_name().c_str(), field->cpp_type_name(), (field->is_repeated() ? "true":"false"), (is_length_delimited ? "true": "false"), field->is_packable());
+    //format(buffer);
+  }
+  //format(" begin = const_cast<char*>(ptr);\n");
   Formatter::SaveState formatter_state(&format);
   format.AddMap(
       {{"name", FieldName(field)},
@@ -855,6 +946,9 @@ void ParseFunctionGenerator::GenerateFieldBody(
   uint32_t tag = WireFormatLite::MakeTag(field->number(), wiretype);
   switch (wiretype) {
     case WireFormatLite::WIRETYPE_VARINT: {
+
+      format(" begin = const_cast<char*>(ptr);\n");
+
       std::string type = PrimitiveTypeName(options_, field->cpp_type());
       if (field->type() == FieldDescriptor::TYPE_ENUM) {
         format.Set("enum_type",
@@ -903,10 +997,22 @@ void ParseFunctionGenerator::GenerateFieldBody(
               zigzag, size);
         }
       }
+
+      format(" end = const_cast<char*>(ptr);\n");
+
+      snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"[I]%s\"));\n", field->name().c_str());
+      format(buffer);
+      snprintf(buffer, sizeof(buffer), " printf(\"FLAMEGRAPH2:%%s %%ld\\n\", ::PROTOBUF_NAMESPACE_ID::internal::get_name2().c_str(), (end - begin));\n");
+      format(buffer);
+      format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
       break;
     }
     case WireFormatLite::WIRETYPE_FIXED32:
     case WireFormatLite::WIRETYPE_FIXED64: {
+
+      format(" begin = const_cast<char*>(ptr);\n");
+
       if (field->is_repeated() || field->real_containing_oneof()) {
         format(
             "$msg$_internal_$put_field$("
@@ -921,6 +1027,15 @@ void ParseFunctionGenerator::GenerateFieldBody(
             "::$proto_ns$::internal::UnalignedLoad<$primitive_type$>(ptr);\n"
             "ptr += sizeof($primitive_type$);\n");
       }
+
+      format(" end = const_cast<char*>(ptr);\n");
+
+      snprintf(buffer, sizeof(buffer), " ::PROTOBUF_NAMESPACE_ID::internal::name_list2.push_back(std::string(\"[I]%s\"));\n", field->name().c_str());
+      format(buffer);
+      snprintf(buffer, sizeof(buffer), " printf(\"FLAMEGRAPH2:%%s %%ld\\n\", ::PROTOBUF_NAMESPACE_ID::internal::get_name2().c_str(), (end - begin));\n");
+      format(buffer);
+      format("  ::PROTOBUF_NAMESPACE_ID::internal::name_list2.pop_back();\n");
+
       break;
     }
     case WireFormatLite::WIRETYPE_LENGTH_DELIMITED: {
@@ -1044,9 +1159,37 @@ void ParseFunctionGenerator::GenerateParseIterationBody(
   }
 }
 
+//static std::vector<std::string> name_list2;
+/*
+static std::string get_name2(){
+  std::string ret; 
+  for (int i = 0; i < name_list2.size(); i++){
+    if (i > 0){
+      ret += ";"; 
+    }    
+    ret += name_list2[i];
+  }
+  return ret; 
+}
+*/
+
+std::string process_full_name(const std::string &full_name){
+  std::string ret = full_name;
+  for (int i = 0; i < ret.size(); i++){
+    if (ret[i] != '.'){
+      continue;
+    }
+  ret[i] = ';';
+  }
+  return ret;
+}
+
 void ParseFunctionGenerator::GenerateFieldSwitch(
     Formatter& format,
     const std::vector<const FieldDescriptor*>& ordered_fields) {
+
+  format("char *begin = nullptr, *end = nullptr;\n"); 
+
   format("switch (tag >> 3) {\n");
   format.Indent();
 
@@ -1063,6 +1206,7 @@ void ParseFunctionGenerator::GenerateFieldSwitch(
     uint32_t tag = WireFormatLite::MakeTag(field->number(), wiretype);
     int tag_size = io::CodedOutputStream::VarintSize32(tag);
     bool is_repeat = ShouldRepeat(field, wiretype);
+
     if (is_repeat) {
       format(
           "ptr -= $1$;\n"
@@ -1088,10 +1232,11 @@ void ParseFunctionGenerator::GenerateFieldSwitch(
                         field);
       format.Outdent();
     }
+
     format(
         "} else\n"
-        "  goto handle_unusual;\n"
-        "$next_tag$;\n");
+        "  goto handle_unusual;\n");
+    format("  $next_tag$;\n");
     format.Outdent();
   }  // for loop over ordered fields
 

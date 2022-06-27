@@ -3569,6 +3569,8 @@ bool FieldDescriptor::is_packed() const {
   if (!is_packable()) return false;
   if (file_->syntax() == FileDescriptor::SYNTAX_PROTO2) {
     return (options_ != nullptr) && options_->packed();
+    //printf("proto2. default packed=true\n");
+    //return options_ == nullptr || !options_->has_packed() || options_->packed();
   } else {
     return options_ == nullptr || !options_->has_packed() || options_->packed();
   }

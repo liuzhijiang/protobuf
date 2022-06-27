@@ -271,16 +271,52 @@ bool Reflection::IsInlined(const FieldDescriptor* field) const {
   return schema_.IsFieldInlined(field);
 }
 
+static std::vector<std::string> name_list;
+static std::string get_name(){
+  std::string ret;
+  for (int i = 0; i < name_list.size(); i++){
+    if (i > 0){
+      ret += ";";
+    }
+    ret += name_list[i];
+  }
+  return ret;
+}
+
 size_t Reflection::SpaceUsedLong(const Message& message) const {
   // object_size_ already includes the in-memory representation of each field
   // in the message, so we only need to account for additional memory used by
   // the fields.
+
+  name_list.push_back("[M]" + descriptor_->name());
   size_t total_size = schema_.GetObjectSize();
+  if (0)
+  {
+    char buffer[1024] = {0};
+    int size = 0;
+    snprintf(buffer, sizeof(buffer), "%s;[ObjectSize]", (get_name()).c_str());
+    size = schema_.GetObjectSize();
+    fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);
+  }
 
   total_size += GetUnknownFields(message).SpaceUsedExcludingSelfLong();
+  {
+    char buffer[1024] = {0};
+    int size = 0;
+    snprintf(buffer, sizeof(buffer), "%s;[UnknownFieldsSize]", (get_name()).c_str());
+    size = GetUnknownFields(message).SpaceUsedExcludingSelfLong();
+    fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);
+  }
 
   if (schema_.HasExtensionSet()) {
     total_size += GetExtensionSet(message).SpaceUsedExcludingSelfLong();
+    {
+      char buffer[1024] = {0};
+      int size = 0;
+      snprintf(buffer, sizeof(buffer), "%s;[ExtensionSetSize]", (get_name()).c_str());
+      size =  GetExtensionSet(message).SpaceUsedExcludingSelfLong();
+      fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);
+    }
   }
   for (int i = 0; i <= last_non_weak_field_index_; i++) {
     const FieldDescriptor* field = descriptor_->field(i);
@@ -290,6 +326,15 @@ size_t Reflection::SpaceUsedLong(const Message& message) const {
   case FieldDescriptor::CPPTYPE_##UPPERCASE:                        \
     total_size += GetRaw<RepeatedField<LOWERCASE> >(message, field) \
                       .SpaceUsedExcludingSelfLong();                \
+  {                                                                                           \
+    name_list.push_back("[RN]" + field->name());                                                       \
+    char buffer[1024] = {0};                                                                  \
+    int size = 0;                                                                             \
+    snprintf(buffer, sizeof(buffer), "%s", (get_name()).c_str());           \
+    size = GetRaw<RepeatedField<LOWERCASE> >(message, field).SpaceUsedExcludingSelfLong() + sizeof(GetRaw<RepeatedField<LOWERCASE> >(message, field));    \
+    fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);                                      \
+    name_list.pop_back();                                                                     \
+  }                                                                                           \
     break
 
         HANDLE_TYPE(INT32, int32_t);
@@ -309,6 +354,15 @@ size_t Reflection::SpaceUsedLong(const Message& message) const {
               total_size +=
                   GetRaw<RepeatedPtrField<std::string> >(message, field)
                       .SpaceUsedExcludingSelfLong();
+              {                                                                                          
+                name_list.push_back("[RS]" + field->name());                                                   
+                char buffer[1024] = {0};                                                                  
+                int size = 0;                                                                             
+                snprintf(buffer, sizeof(buffer), "%s", (get_name()).c_str());           
+                size = GetRaw<RepeatedPtrField<std::string> >(message, field).SpaceUsedExcludingSelfLong() + sizeof(GetRaw<RepeatedPtrField<std::string> >(message, field));
+                fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);                                      
+                name_list.pop_back();                                                                     
+              }                                                                                           
               break;
           }
           break;
@@ -351,6 +405,17 @@ size_t Reflection::SpaceUsedLong(const Message& message) const {
                 const std::string* ptr =
                     &GetField<InlinedStringField>(message, field).GetNoArena();
                 total_size += StringSpaceUsedExcludingSelfLong(*ptr);
+
+                {                                                                                          
+                  name_list.push_back("[S]" + field->name());                                                   
+                  char buffer[1024] = {0};                                                                  
+                  int size = 0;                                                                             
+                  snprintf(buffer, sizeof(buffer), "%s", (get_name()).c_str());           
+                  size = StringSpaceUsedExcludingSelfLong(*ptr) + sizeof(GetField<InlinedStringField>(message, field));
+                  fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);                                      
+                  name_list.pop_back();                                                                     
+                }                                                                                           
+
                 break;
               }
 
@@ -368,6 +433,15 @@ size_t Reflection::SpaceUsedLong(const Message& message) const {
                 // include sizeof(string) as well.
                 total_size +=
                     sizeof(*ptr) + StringSpaceUsedExcludingSelfLong(*ptr);
+                {                                                                                          
+                  name_list.push_back("[S]" + field->name());                                                   
+                  char buffer[1024] = {0};                                                                  
+                  int size = 0;                                                                             
+                  snprintf(buffer, sizeof(buffer), "%s", (get_name()).c_str());           
+                  size = sizeof(*ptr) + StringSpaceUsedExcludingSelfLong(*ptr) + sizeof(GetField<ArenaStringPtr>(message, field));
+                  fprintf(stderr, "FLAMEGRAPH:%s %d\n", buffer, size);                                      
+                  name_list.pop_back();                                                                     
+                }                                                                                           
               }
               break;
             }
@@ -379,7 +453,7 @@ size_t Reflection::SpaceUsedLong(const Message& message) const {
           if (schema_.IsDefaultInstance(message)) {
             // For singular fields, the prototype just stores a pointer to the
             // external type's prototype, so there is no extra memory usage.
-          } else {
+      } else {
             const Message* sub_message = GetRaw<const Message*>(message, field);
             if (sub_message != nullptr) {
               total_size += sub_message->SpaceUsedLong();
@@ -389,6 +463,7 @@ size_t Reflection::SpaceUsedLong(const Message& message) const {
       }
     }
   }
+  name_list.pop_back();
   return total_size;
 }
 
