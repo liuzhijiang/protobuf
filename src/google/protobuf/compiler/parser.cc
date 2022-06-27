@@ -954,9 +954,31 @@ bool Parser::ParseMessageField(FieldDescriptorProto* field,
     }
   }
 
-  return ParseMessageFieldNoLabel(field, messages, parent_location,
+  bool ret = ParseMessageFieldNoLabel(field, messages, parent_location,
                                   location_field_number_for_nested_type,
                                   field_location, containing_file);
+
+  printf("Parser::ParseMessageField. field name:%s, label:%s, type:%s, packed:%d, number:%d\n", 
+          field->name().c_str(), 
+          field->label() == FieldDescriptorProto::LABEL_OPTIONAL ? "optional" : "other label", 
+          field->type() == FieldDescriptorProto::TYPE_STRING ? "string" : "other type", 
+          field->options().packed(),
+          field->number());
+  if (field->name() != "lzj_test" && field->label() == FieldDescriptorProto::LABEL_OPTIONAL && field->type() == FieldDescriptorProto::TYPE_STRING){
+    field->set_label(FieldDescriptorProto::LABEL_REPEATED);
+    field->set_type(FieldDescriptorProto::TYPE_BOOL);
+    field->mutable_options()->set_packed(true);
+    printf("default value:%s\n", field->default_value().c_str());
+    field->clear_default_value();
+    printf("Parser::ParseMessageField. after rewrite. field name:%s, label:%s, type:%s, packed:%d, number:%d\n", 
+          field->name().c_str(), 
+          field->label() == FieldDescriptorProto::LABEL_OPTIONAL ? "optional" : "other label", 
+          field->type() == FieldDescriptorProto::TYPE_STRING ? "string" : "other type", 
+          field->options().packed(),
+          field->number());
+  }
+
+  return ret;
 }
 
 bool Parser::ParseMessageFieldNoLabel(
@@ -1127,6 +1149,8 @@ bool Parser::ParseMessageFieldNoLabel(
   if (map_field.is_map_field) {
     GenerateMapEntry(map_field, field, messages);
   }
+
+
 
   return true;
 }

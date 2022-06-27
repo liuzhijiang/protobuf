@@ -918,6 +918,15 @@ uint8_t* EpsCopyOutputStream::WriteStringMaybeAliasedOutline(uint32_t num,
   return WriteRawMaybeAliased(s.data(), size, ptr);
 }
 
+uint8_t* EpsCopyOutputStream::WriteRepeatedUint8ArrayMaybeAliasedOutline(uint32_t num,
+                                                           const char *data, size_t len,
+                                                           uint8_t* ptr) {
+  ptr = EnsureSpace(ptr);
+  uint32_t size = len;
+  ptr = WriteLengthDelim(num, size, ptr);
+  return WriteRawMaybeAliased(data, size, ptr);
+}
+
 uint8_t* EpsCopyOutputStream::WriteStringOutline(uint32_t num, const std::string& s,
                                                uint8_t* ptr) {
   ptr = EnsureSpace(ptr);

@@ -430,11 +430,20 @@ void RepeatedPrimitiveFieldGenerator::GenerateSerializeWithCachedSizesToArray(
           "  }\n"
           "}\n");
     } else {
-      format(
-          "if (this->_internal_$name$_size() > 0) {\n"
-          "  target = stream->WriteFixedPacked($number$, _internal_$name$(), "
-          "target);\n"
-          "}\n");
+      printf("field cpp_type:%s\n", descriptor_->type_name());
+      if (std::string(descriptor_->type_name()) == std::string("bool")){
+                format(
+            "if (this->_internal_$name$_size() > 0) {\n"
+            "  target = stream->WriteRepeatedUint8ArrayMaybeAliased($number$, (const char*)_internal_$name$().data(), _internal_$name$().size(),"
+            "target);\n"
+            "}\n");
+      }else{
+        format(
+            "if (this->_internal_$name$_size() > 0) {\n"
+            "  target = stream->WriteFixedPacked($number$, _internal_$name$(), "
+            "target);\n"
+            "}\n");
+      }
     }
   } else {
     format(

@@ -492,6 +492,8 @@ class PROTOBUF_EXPORT WireFormatLite {
       double value, uint8_t* target);
   PROTOBUF_NDEBUG_INLINE static uint8_t* WriteBoolNoTagToArray(bool value,
                                                                uint8_t* target);
+  PROTOBUF_NDEBUG_INLINE static uint8_t* WriteFixed8NoTagToArray(uint8_t value,
+                                                               uint8_t* target);
   PROTOBUF_NDEBUG_INLINE static uint8_t* WriteEnumNoTagToArray(int value,
                                                                uint8_t* target);
 
@@ -574,6 +576,9 @@ class PROTOBUF_EXPORT WireFormatLite {
   PROTOBUF_NDEBUG_INLINE static uint8_t* WriteBoolToArray(int field_number,
                                                           bool value,
                                                           uint8_t* target);
+  PROTOBUF_NDEBUG_INLINE static uint8_t* WriteFixed8ToArray(int field_number,
+                                                          uint8_t value,
+                                                          uint8_t* target);                                                        
   PROTOBUF_NDEBUG_INLINE static uint8_t* WriteEnumToArray(int field_number,
                                                           int value,
                                                           uint8_t* target);
@@ -1430,6 +1435,10 @@ inline uint8_t* WireFormatLite::WriteBoolNoTagToArray(bool value,
                                                       uint8_t* target) {
   return io::CodedOutputStream::WriteVarint32ToArray(value ? 1 : 0, target);
 }
+inline uint8_t* WireFormatLite::WriteFixed8NoTagToArray(uint8_t value,
+                                                      uint8_t* target) {
+  return io::CodedOutputStream::WriteVarint32ToArray(value, target);
+}
 inline uint8_t* WireFormatLite::WriteEnumNoTagToArray(int value,
                                                       uint8_t* target) {
   return io::CodedOutputStream::WriteVarint32SignExtendedToArray(value, target);
@@ -1603,6 +1612,12 @@ inline uint8_t* WireFormatLite::WriteBoolToArray(int field_number, bool value,
   target = WriteTagToArray(field_number, WIRETYPE_VARINT, target);
   return WriteBoolNoTagToArray(value, target);
 }
+inline uint8_t* WireFormatLite::WriteFixed8ToArray(int field_number, uint8_t value,
+                                                 uint8_t* target) {
+  target = WriteTagToArray(field_number, WIRETYPE_VARINT, target);
+  return WriteFixed8NoTagToArray(value, target);
+}
+
 inline uint8_t* WireFormatLite::WriteEnumToArray(int field_number, int value,
                                                  uint8_t* target) {
   target = WriteTagToArray(field_number, WIRETYPE_VARINT, target);

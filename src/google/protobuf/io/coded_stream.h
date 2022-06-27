@@ -157,7 +157,6 @@
 #include <google/protobuf/port.h>
 #include <google/protobuf/stubs/port.h>
 
-
 #include <google/protobuf/port_def.inc>
 
 namespace google {
@@ -742,6 +741,19 @@ class PROTOBUF_EXPORT EpsCopyOutputStream {
     return WriteStringMaybeAliased(num, s, ptr);
   }
 
+  uint8_t* WriteRepeatedUint8ArrayMaybeAliased(uint32_t num, const char *data, size_t len,
+                                   uint8_t* ptr) {
+    std::ptrdiff_t size = len;
+    if (PROTOBUF_PREDICT_FALSE(
+            size >= 128 || end_ - ptr + 16 - TagSize(num << 3) - 1 < size)) {
+      return WriteRepeatedUint8ArrayMaybeAliasedOutline(num, data, len, ptr);
+    }
+    ptr = UnsafeVarint((num << 3) | 2, ptr);
+    *ptr++ = static_cast<uint8_t>(size);
+    std::memcpy(ptr, data, size);
+    return ptr + size;
+  }
+
   template <typename T>
   PROTOBUF_ALWAYS_INLINE uint8_t* WriteString(uint32_t num, const T& s,
                                               uint8_t* ptr) {
@@ -890,6 +902,9 @@ class PROTOBUF_EXPORT EpsCopyOutputStream {
 
   uint8_t* WriteStringMaybeAliasedOutline(uint32_t num, const std::string& s,
                                           uint8_t* ptr);
+  uint8_t* WriteRepeatedUint8ArrayMaybeAliasedOutline(uint32_t num,
+                                                           const char *data, size_t len,
+                                                           uint8_t* ptr);
   uint8_t* WriteStringOutline(uint32_t num, const std::string& s, uint8_t* ptr);
 
   template <typename T, typename E>

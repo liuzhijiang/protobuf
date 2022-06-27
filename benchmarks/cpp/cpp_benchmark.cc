@@ -37,7 +37,7 @@
 #include "datasets/google_message2/benchmark_message2.pb.h"
 #include "datasets/google_message3/benchmark_message3.pb.h"
 #include "datasets/google_message4/benchmark_message4.pb.h"
-
+#include <string>
 
 #define PREFIX "dataset."
 #define SUFFIX ".pb"
@@ -58,15 +58,15 @@ class Fixture : public benchmark::Fixture {
 
     const Descriptor* d =
         DescriptorPool::generated_pool()->FindMessageTypeByName(
-            dataset.message_name());
+            std::string((char*)dataset.message_name().data(), dataset.message_name().size()));
 
     if (!d) {
-      std::cerr << "Couldn't find message named '" << dataset.message_name()
+      std::cerr << "Couldn't find message named '" << std::string((char*)dataset.message_name().data(), dataset.message_name().size())
                 << "\n";
     }
 
     prototype_ = MessageFactory::generated_factory()->GetPrototype(d);
-    SetName((dataset.name() + suffix).c_str());
+    SetName((std::string((char*)dataset.name().data(), dataset.name().size()) + suffix).c_str());
   }
 
  protected:
@@ -217,22 +217,22 @@ void RegisterBenchmarks(const std::string& dataset_bytes) {
   BenchmarkDataset dataset;
   GOOGLE_CHECK(dataset.ParseFromString(dataset_bytes));
 
-  if (dataset.message_name() == "benchmarks.proto3.GoogleMessage1") {
+  if (std::string((char*)dataset.message_name().data(), dataset.message_name().size()) == "benchmarks.proto3.GoogleMessage1") {
     RegisterBenchmarksForType<benchmarks::proto3::GoogleMessage1>(dataset);
-  } else if (dataset.message_name() == "benchmarks.proto2.GoogleMessage1") {
+  } else if (std::string((char*)dataset.message_name().data(), dataset.message_name().size()) == "benchmarks.proto2.GoogleMessage1") {
     RegisterBenchmarksForType<benchmarks::proto2::GoogleMessage1>(dataset);
-  } else if (dataset.message_name() == "benchmarks.proto2.GoogleMessage2") {
+  } else if (std::string((char*)dataset.message_name().data(), dataset.message_name().size()) == "benchmarks.proto2.GoogleMessage2") {
     RegisterBenchmarksForType<benchmarks::proto2::GoogleMessage2>(dataset);
-  } else if (dataset.message_name() ==
+  } else if (std::string((char*)dataset.message_name().data(), dataset.message_name().size()) ==
       "benchmarks.google_message3.GoogleMessage3") {
     RegisterBenchmarksForType
     <benchmarks::google_message3::GoogleMessage3>(dataset);
-  } else if (dataset.message_name() ==
+  } else if (std::string((char*)dataset.message_name().data(), dataset.message_name().size()) ==
       "benchmarks.google_message4.GoogleMessage4") {
     RegisterBenchmarksForType
     <benchmarks::google_message4::GoogleMessage4>(dataset);
   } else {
-    std::cerr << "Unknown message type: " << dataset.message_name();
+    std::cerr << "Unknown message type: " << std::string((char*)dataset.message_name().data(), dataset.message_name().size());
     exit(1);
   }
 }

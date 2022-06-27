@@ -159,6 +159,14 @@ class PROTOBUF_EXPORT EpsCopyInputStream {
     }
     return ReadStringFallback(ptr, size, s);
   }
+  PROTOBUF_NODISCARD const char* ReadRepeatedUint8Array(const char* ptr, int size,
+                                            ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint8_t > *array) {
+    if (size <= buffer_end_ + kSlopBytes - ptr) {
+      array->Add(ptr, ptr + size);
+      return ptr + size;
+    }
+    return ReadRepeatedUint8ArrayFallback(ptr, size, array);
+  }
   PROTOBUF_NODISCARD const char* AppendString(const char* ptr, int size,
                                               std::string* s) {
     if (size <= buffer_end_ + kSlopBytes - ptr) {
@@ -309,6 +317,8 @@ class PROTOBUF_EXPORT EpsCopyInputStream {
   const char* SkipFallback(const char* ptr, int size);
   const char* AppendStringFallback(const char* ptr, int size, std::string* str);
   const char* ReadStringFallback(const char* ptr, int size, std::string* str);
+  const char *ReadRepeatedUint8ArrayFallback(const char* ptr, int size,
+                                                   ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint8_t >* array);
   bool StreamNext(const void** data) {
     bool res = zcis_->Next(data, &size_);
     if (res) overall_limit_ -= size_;
@@ -907,6 +917,8 @@ PROTOBUF_NODISCARD const char* PackedEnumParserArg(
 
 PROTOBUF_EXPORT PROTOBUF_NODISCARD const char* PackedBoolParser(
     void* object, const char* ptr, ParseContext* ctx);
+PROTOBUF_EXPORT PROTOBUF_NODISCARD const char* PackedFixed8Parser(
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint8_t > *object, const char* ptr, ParseContext* ctx);
 PROTOBUF_EXPORT PROTOBUF_NODISCARD const char* PackedFixed32Parser(
     void* object, const char* ptr, ParseContext* ctx);
 PROTOBUF_EXPORT PROTOBUF_NODISCARD const char* PackedSFixed32Parser(

@@ -220,6 +220,18 @@ const char* EpsCopyInputStream::ReadStringFallback(const char* ptr, int size,
   return AppendSize(ptr, size,
                     [str](const char* p, int s) { str->append(p, s); });
 }
+const char* EpsCopyInputStream::ReadRepeatedUint8ArrayFallback(const char* ptr, int size,
+                                                   ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint8_t >* array) {
+  array->Clear();
+  if (PROTOBUF_PREDICT_TRUE(size <= buffer_end_ - ptr + limit_)) {
+    // Reserve the string up to a static safe size. If strings are bigger than
+    // this we proceed by growing the string as needed. This protects against
+    // malicious payloads making protobuf hold on to a lot of memory.
+    array->Reserve(array->size() + std::min<int>(size, kSafeStringSize));
+  }
+  return AppendSize(ptr, size,
+                    [array](const char* p, int s) { array->Add(p, p + s); });
+}
 
 const char* EpsCopyInputStream::AppendStringFallback(const char* ptr, int size,
                                                      std::string* str) {
@@ -455,6 +467,14 @@ const char* PackedEnumParser(void* object, const char* ptr, ParseContext* ctx) {
 
 const char* PackedBoolParser(void* object, const char* ptr, ParseContext* ctx) {
   return VarintParser<bool, false>(object, ptr, ctx);
+}
+const char* PackedFixed8Parser(::PROTOBUF_NAMESPACE_ID::RepeatedField< uint8_t > *object, const char* ptr, ParseContext* ctx) {
+  /*
+  return VarintParser<uint8_t, false>(object, ptr, ctx);
+  */
+  int size = ReadSize(&ptr);
+  if (!ptr) return nullptr;
+  return ctx->ReadRepeatedUint8Array(ptr, size, object);
 }
 
 template <typename T>

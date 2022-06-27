@@ -440,7 +440,8 @@ bool MessageLite::SerializePartialToOstream(std::ostream* output) const {
 
 bool MessageLite::AppendToString(std::string* output) const {
   GOOGLE_DCHECK(IsInitialized()) << InitializationErrorMessage("serialize", *this);
-  return AppendPartialToString(output);
+  bool ret = AppendPartialToString(output);
+  return ret;
 }
 
 bool MessageLite::AppendPartialToString(std::string* output) const {
@@ -455,13 +456,14 @@ bool MessageLite::AppendPartialToString(std::string* output) const {
   STLStringResizeUninitializedAmortized(output, old_size + byte_size);
   uint8_t* start =
       reinterpret_cast<uint8_t*>(io::mutable_string_data(output) + old_size);
-  SerializeToArrayImpl(*this, start, byte_size);
+  uint8_t *stop = SerializeToArrayImpl(*this, start, byte_size);
   return true;
 }
 
 bool MessageLite::SerializeToString(std::string* output) const {
   output->clear();
-  return AppendToString(output);
+  bool ret = AppendToString(output);
+  return ret;
 }
 
 bool MessageLite::SerializePartialToString(std::string* output) const {

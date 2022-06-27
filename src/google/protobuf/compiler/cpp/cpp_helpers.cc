@@ -544,7 +544,8 @@ const char* PrimitiveTypeName(FieldDescriptor::CppType type) {
     case FieldDescriptor::CPPTYPE_FLOAT:
       return "float";
     case FieldDescriptor::CPPTYPE_BOOL:
-      return "bool";
+      return "uint8_t";
+      //return "bool";
     case FieldDescriptor::CPPTYPE_ENUM:
       return "int";
     case FieldDescriptor::CPPTYPE_STRING:
@@ -576,7 +577,8 @@ std::string PrimitiveTypeName(const Options& options,
     case FieldDescriptor::CPPTYPE_FLOAT:
       return "float";
     case FieldDescriptor::CPPTYPE_BOOL:
-      return "bool";
+      return "uint8_t";
+      //return "bool";
     case FieldDescriptor::CPPTYPE_ENUM:
       return "int";
     case FieldDescriptor::CPPTYPE_STRING:
@@ -620,7 +622,8 @@ const char* DeclaredTypeMethodName(FieldDescriptor::Type type) {
       return "Double";
 
     case FieldDescriptor::TYPE_BOOL:
-      return "Bool";
+      return "Fixed8";
+      //return "Bool";
     case FieldDescriptor::TYPE_ENUM:
       return "Enum";
 
